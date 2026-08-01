@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>growth/engine — AI SEO & content, on autopilot</title>
+<meta name="description" content="Connect your site and social accounts. Get an SEO audit, on-demand content generation, and weekly auto-drafted fixes for what's underperforming." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0B0F14;
+    --panel: #12171F;
+    --line: #212A35;
+    --signal: #C6F135;
+    --mist: #9AA7B2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ink);
+    color: #E6ECF1;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+  }
+  .display { font-family: 'Space Grotesk', sans-serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; text-decoration: none; }
+
+  header {
+    border-bottom: 1px solid var(--line);
+    padding: 20px 0;
+  }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 500; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--signal); }
+  nav { display: flex; gap: 28px; }
+  nav a { color: var(--mist); font-size: 14px; }
+  nav a:hover { color: #fff; }
+  .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--signal); color: var(--ink); }
+  .btn-primary:hover { filter: brightness(0.95); }
+  .btn-ghost { border: 1px solid var(--line); color: var(--mist); }
+  .btn-ghost:hover { color: #fff; border-color: var(--mist); }
+
+  .hero {
+    padding: 100px 0 80px;
+    text-align: center;
+  }
+  .hero .eyebrow {
+    color: var(--signal);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: 52px;
+    line-height: 1.1;
+    max-width: 780px;
+    margin: 0 auto 20px;
+  }
+  .hero p {
+    color: var(--mist);
+    font-size: 18px;
+    max-width: 560px;
+    margin: 0 auto 36px;
+  }
+  .hero-cta { display: flex; gap: 12px; justify-content: center; }
+
+  .section { padding: 80px 0; border-top: 1px solid var(--line); }
+  .section-head { text-align: center; margin-bottom: 56px; }
+  .section-head .eyebrow { color: var(--signal); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+  .section-head h2 { font-size: 32px; max-width: 600px; margin: 0 auto; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 28px;
+  }
+  .card .num { color: var(--signal); font-size: 13px; margin-bottom: 14px; }
+  .card h3 { font-size: 18px; margin-bottom: 10px; }
+  .card p { color: var(--mist); font-size: 14px; }
+
+  .flow { display: flex; align-items: center; gap: 0; margin-top: 60px; flex-wrap: wrap; justify-content: center; }
+  .flow-step {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: #d7dde2;
+    text-align: center;
+    min-width: 150px;
+  }
+  .flow-arrow { color: var(--line); font-size: 20px; padding: 0 12px; }
+
+  .cta-band {
+    text-align: center;
+    padding: 90px 0;
+    border-top: 1px solid var(--line);
+  }
+  .cta-band h2 { font-size: 34px; margin-bottom: 16px; }
+  .cta-band p { color: var(--mist); margin-bottom: 32px; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 32px 0;
+  }
+  footer .wrap { display: flex; justify-content: space-between; align-items: center; }
+  footer p { color: var(--mist); font-size: 13px; }
+
+  @media (max-width: 800px) {
+    .hero h1 { font-size: 36px; }
+    .grid3 { grid-template-columns: 1fr; }
+    nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo"><span class="dot"></span>growth<span style="color:var(--signal)">/engine</span></div>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+    </nav>
+    <a href="#signup" class="btn btn-primary">Get early access</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">AI-powered SEO & content, on autopilot</div>
+    <h1 class="display">Your SEO manager doesn't take weekends off. Now yours doesn't either.</h1>
+    <p>Connect your site and social accounts. Get a real audit, generate on-brand content in seconds, and let it auto-draft fixes for whatever's underperforming — every week, without you asking.</p>
+    <div class="hero-cta">
+      <a href="#signup" class="btn btn-primary">Get early access</a>
+      <a href="#how" class="btn btn-ghost">See how it works</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">What it does</div>
+      <h2 class="display">Three tools, one dashboard</h2>
+    </div>
+    <div class="grid3">
+      <div class="card">
+        <div class="num mono">01</div>
+        <h3>SEO audit</h3>
+        <p>Connects to Search Console and tells you — in plain language — which pages are ranking but not converting, and what to fix first.</p>
+      </div>
+      <div class="card">
+        <div class="num mono">02</div>
+        <h3>Content on demand</h3>
+        <p>Tell it the product, the audience, the goal. Get a blog post, landing page copy, an ad, or a video script back in seconds — ready to edit and ship.</p>
+      </div>
+      <div class="card">
+        <div class="num mono">03</div>
+        <h3>Auto-suggested fixes</h3>
+        <p>Every week, it scans your connected accounts for gaps and drafts the content to fix them. You just approve or dismiss — nothing publishes without you.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">How it works</div>
+      <h2 class="display">Connect once, get fixes every week</h2>
+    </div>
+    <div class="flow">
+      <div class="flow-step">Connect your site & accounts</div>
+      <div class="flow-arrow mono">→</div>
+      <div class="flow-step">Get your SEO audit</div>
+      <div class="flow-arrow mono">→</div>
+      <div class="flow-step">Generate content on demand</div>
+      <div class="flow-arrow mono">→</div>
+      <div class="flow-step">Approve weekly auto-drafts</div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band" id="signup">
+  <div class="wrap">
+    <h2 class="display">Stop guessing what to publish next.</h2>
+    <p>Early access is free while we're in beta. No credit card.</p>
+    <a href="mailto:hello@example.com?subject=Early access" class="btn btn-primary">Get early access</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="logo"><span class="dot"></span>growth<span style="color:var(--signal)">/engine</span></div>
+    <p>&copy; 2026 growth/engine. All rights reserved.</p>
+  </div>
+</footer>
+
+</body>
+</html>
