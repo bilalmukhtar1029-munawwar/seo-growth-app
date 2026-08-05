@@ -163,4 +163,4 @@ reads it to allow CORS from your live frontend automatically.
 | Variable | Required? | What it's for |
 |---|---|---|
 | `NEXT_PUBLIC_BACKEND_URL` | ✅ Yes | Your FastAPI Cloud URL |
-| `NEXT_PUBLIC_SUPABASE_URL` / `_ANON_KEY` | ✅ Yes | From Supabase project settings →  API  |
+| `NEXT_PUBLIC_SUPABASE_URL` / `_ANON_KEY` | ✅ Yes | From Supabase project settings → API   |
