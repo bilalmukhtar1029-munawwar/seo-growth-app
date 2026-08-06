@@ -50,8 +50,14 @@ def _scan_one_user(db, account: dict) -> dict:
     site_url = account.get("account_label")
     if not site_url:
         return {"user_id": user_id, "skipped": "no site_url on record"}
-
-    creds = Credentials(token=account["access_token"])
+      creds = Credentials(
+    token=account["access_token"],
+    refresh_token=account["refresh_token"],
+    token_uri=account["token_uri"],
+    client_id=account["client_id"],
+    client_secret=account["client_secret"],
+    scopes=account["scopes"].split(" ") if account.get("scopes") else None,
+)
     service = build("searchconsole", "v1", credentials=creds)
     end = date.today() - timedelta(days=3)
     start = end - timedelta(days=30)
