@@ -87,6 +87,10 @@ def google_callback(code: str, state: str | None = None):
                 "platform": "google_search_console",
                 "access_token": creds.token,
                 "refresh_token": creds.refresh_token,
+                "token_uri": creds.token_uri,
+                "client_id": creds.client_id,
+                "client_secret": creds.client_secret,
+                "scopes": " ".join(creds.scopes) if creds.scopes else None,
             },
             on_conflict="user_id,platform",
         ).execute()
