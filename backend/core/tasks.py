@@ -17,12 +17,21 @@ For each user with a connected Search Console account, it:
 Nothing gets published automatically — these land in the user's "Auto-Suggested
 Content Feed" (query content_drafts where source='auto' and status='draft') for
 them to approve or edit, matching Part 2 of your original plan.
+
+Instagram scanning (scan_all_instagram_users / _scan_one_instagram_user) works
+the same way: pulls recent posts + engagement via the Meta Graph API and saves
+a rollup snapshot to `instagram_snapshots`, which the dashboard's SEO Snapshot
+card reads from instead of showing sample data.
 """
 from datetime import date, timedelta
 
 from core.auth import get_admin_client
 from core.ai_client import generate_json
-from core.instagram_client import fetch_ig_media, fetch_ig_media_insights, compute_posting_stats
+from core.instagram_client import (
+    fetch_ig_media,
+    fetch_ig_media_insights,
+    compute_posting_stats,
+)
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -116,21 +125,6 @@ def _scan_one_user(db, account: dict) -> dict:
 
     return {"user_id": user_id, "gaps_found": len(gaps), "drafts_created": drafted}
 
-    from core.instagram_client import (
-        fetch_ig_media,
-        fetch_ig_media_insights,
-        compute_posting_stats,
-    )
-
-Then add the two functions below anywhere in tasks.py (e.g. right after
-_scan_one_user). They follow the exact same shape as the Search Console
-scanner: a "scan all users" loop + a "scan one user" worker, writing a
-snapshot instead of content_drafts (Instagram scanning informs the SEO
-Snapshot / dashboard numbers, it doesn't generate content by itself —
-gaps found here can later feed into scan_all_users_for_content_gaps-style
-logic once you want "auto-post about Instagram inactivity" content).
-"""
-
 
 def scan_all_instagram_users() -> list[dict]:
     db = get_admin_client()
@@ -167,8 +161,7 @@ def _scan_one_instagram_user(db, account: dict) -> dict:
 
     stats = compute_posting_stats(posts)
 
-    # Mirrors how the Search Console scan stores its result — adjust the
-    # table/column names here if your `instagram_snapshots` table differs.
+    # Mirrors how the Search Console scan stores its result.
     db.table("instagram_snapshots").upsert(
         {
             "user_id": user_id,
@@ -186,4 +179,3 @@ def _scan_one_instagram_user(db, account: dict) -> dict:
         "posts_scanned": len(posts),
         "posts_per_week": stats["posts_per_week"],
     }
-
