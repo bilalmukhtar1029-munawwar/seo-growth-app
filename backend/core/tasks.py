@@ -22,6 +22,7 @@ from datetime import date, timedelta
 
 from core.auth import get_admin_client
 from core.ai_client import generate_json
+from core.instagram_client import fetch_ig_media, fetch_ig_media_insights, compute_posting_stats
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -114,3 +115,75 @@ def _scan_one_user(db, account: dict) -> dict:
         drafted += 1
 
     return {"user_id": user_id, "gaps_found": len(gaps), "drafts_created": drafted}
+
+    from core.instagram_client import (
+        fetch_ig_media,
+        fetch_ig_media_insights,
+        compute_posting_stats,
+    )
+
+Then add the two functions below anywhere in tasks.py (e.g. right after
+_scan_one_user). They follow the exact same shape as the Search Console
+scanner: a "scan all users" loop + a "scan one user" worker, writing a
+snapshot instead of content_drafts (Instagram scanning informs the SEO
+Snapshot / dashboard numbers, it doesn't generate content by itself —
+gaps found here can later feed into scan_all_users_for_content_gaps-style
+logic once you want "auto-post about Instagram inactivity" content).
+"""
+
+
+def scan_all_instagram_users() -> list[dict]:
+    db = get_admin_client()
+    accounts = (
+        db.table("connected_accounts")
+        .select("*")
+        .eq("platform", "instagram")
+        .execute()
+    )
+    results = []
+    for account in accounts.data or []:
+        try:
+            results.append(_scan_one_instagram_user(db, account))
+        except Exception as e:
+            results.append({"user_id": account["user_id"], "error": str(e)})
+    return results
+
+
+def _scan_one_instagram_user(db, account: dict) -> dict:
+    user_id = account["user_id"]
+
+    ig_business_account_id = account.get("account_label")
+    access_token = account.get("access_token")
+    if not (ig_business_account_id and access_token):
+        return {"user_id": user_id, "skipped": "no IG business account id or token on record"}
+
+    posts = fetch_ig_media(ig_business_account_id, access_token)
+
+    for post in posts:
+        insights = fetch_ig_media_insights(post["id"], post["media_type"], access_token)
+        post["reach"] = insights.get("reach")
+        post["impressions"] = insights.get("impressions")
+        post["saved"] = insights.get("saved")
+
+    stats = compute_posting_stats(posts)
+
+    # Mirrors how the Search Console scan stores its result — adjust the
+    # table/column names here if your `instagram_snapshots` table differs.
+    db.table("instagram_snapshots").upsert(
+        {
+            "user_id": user_id,
+            "posts_per_week": stats["posts_per_week"],
+            "avg_engagement": stats["avg_engagement"],
+            "last_post_days_ago": stats["last_post_days_ago"],
+            "recent_posts": posts,
+            "scanned_at": "now()",
+        },
+        on_conflict="user_id",
+    ).execute()
+
+    return {
+        "user_id": user_id,
+        "posts_scanned": len(posts),
+        "posts_per_week": stats["posts_per_week"],
+    }
+
