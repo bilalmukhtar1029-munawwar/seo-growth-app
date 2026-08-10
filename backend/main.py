@@ -5,6 +5,13 @@ FastAPI app entrypoint. Run with:
 """
 import os
 
+from dotenv import load_dotenv
+
+# Load backend/.env BEFORE importing routers — several modules read env vars
+# at import time (e.g. core/ai_client.DEFAULT_MODEL), and FastAPI Cloud / Vercel
+# inject env natively, so this only affects local dev.
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
