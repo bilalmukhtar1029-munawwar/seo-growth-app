@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 def _check_secret(x_scan_secret: str):
-    expected = os.environ.get("scan-secret-12345")
+    expected = os.environ.get("INTERNAL_SCAN_SECRET")
     if not expected:
         raise HTTPException(
             status_code=500,

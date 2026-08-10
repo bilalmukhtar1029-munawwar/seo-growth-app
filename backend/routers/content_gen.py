@@ -9,6 +9,7 @@ from schemas import (
 )
 from core.ai_client import generate_json
 from core.auth import get_optional_user_id, get_admin_client
+from core.rate_limit import rate_limit
 
 router = APIRouter()
 
@@ -49,7 +50,7 @@ def _context(req: ContentRequest) -> str:
     )
 
 
-@router.post("/blog", response_model=BlogResponse)
+@router.post("/blog", response_model=BlogResponse, dependencies=[Depends(rate_limit)])
 def generate_blog(req: ContentRequest, user_id: str | None = Depends(get_optional_user_id)):
     try:
         data = generate_json(
@@ -69,7 +70,7 @@ def generate_blog(req: ContentRequest, user_id: str | None = Depends(get_optiona
         raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
 
 
-@router.post("/landing-page", response_model=LandingPageResponse)
+@router.post("/landing-page", response_model=LandingPageResponse, dependencies=[Depends(rate_limit)])
 def generate_landing_page(req: ContentRequest, user_id: str | None = Depends(get_optional_user_id)):
     try:
         data = generate_json(
@@ -88,7 +89,7 @@ def generate_landing_page(req: ContentRequest, user_id: str | None = Depends(get
         raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
 
 
-@router.post("/ad", response_model=AdResponse)
+@router.post("/ad", response_model=AdResponse, dependencies=[Depends(rate_limit)])
 def generate_ad(req: ContentRequest, user_id: str | None = Depends(get_optional_user_id)):
     try:
         data = generate_json(
@@ -107,7 +108,7 @@ def generate_ad(req: ContentRequest, user_id: str | None = Depends(get_optional_
         raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
 
 
-@router.post("/video-script", response_model=VideoScriptResponse)
+@router.post("/video-script", response_model=VideoScriptResponse, dependencies=[Depends(rate_limit)])
 def generate_video_script(req: ContentRequest, user_id: str | None = Depends(get_optional_user_id)):
     try:
         data = generate_json(

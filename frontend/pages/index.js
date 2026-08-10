@@ -69,8 +69,23 @@ export default function Home() {
   const loadMockAudit = async () => {
     setAuditLoading(true);
     try {
+      // Logged in + connected to Search Console -> real numbers.
+      // Otherwise fall back to the demo report so the panel still shows something.
+      let data = null;
+      if (session?.access_token) {
+        const real = await fetch(`${BACKEND_URL}/audit/search-console-report`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (real.ok) {
+          data = await real.json();
+          setAudit(data);
+          setAuditLoading(false);
+          return;
+        }
+      }
       const res = await fetch(`${BACKEND_URL}/audit/mock-report`);
-      setAudit(await res.json());
+      data = await res.json();
+      setAudit(data);
     } catch (e) {
       // silent - audit panel is a bonus, not the main flow
     } finally {
@@ -79,8 +94,9 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (!sessionChecked) return;
     loadMockAudit();
-  }, []);
+  }, [session, sessionChecked]);
 
   const handleChange = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -200,7 +216,9 @@ export default function Home() {
             </div>
           )}
           <p className="font-mono text-[11px] text-mist mt-3">
-            Based on sample data — click "Connect Search Console" above for your real numbers.
+            {session
+              ? "Live data from your connected Search Console account (falls back to sample data if none connected)."
+              : "Based on sample data — log in and click \"Connect Search Console\" for your real numbers."}
           </p>
         </div>
       </div>

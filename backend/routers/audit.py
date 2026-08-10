@@ -1,22 +1,21 @@
 """
-SEO/Social Audit endpoints — STUB.
+SEO/Social Audit endpoints.
 
-This module is intentionally a stub. A real audit needs live data from:
-  - Google Search Console API (search rankings, missing keywords)
-  - Meta Graph API (Instagram/Facebook engagement, posting history)
-  - LinkedIn Marketing API
+/mock-report             -> demo flow with placeholder data
+/search-console-report   -> REAL: pulls the logged-in user's stored Search
+                            Console account, fetches live ranking data,
+                            runs it through the AI, and saves the report.
 
-Each of those requires the business to grant OAuth access, and Meta/LinkedIn
-both require an app review before you can pull real user data in production
-(see README "Phase 2" for the process). Wire the real calls in here once
-those OAuth flows are in place.
+Meta/LinkedIn live data still needs their platform app reviews (see README)
+— those pull requests are external approval steps, not code.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import date, timedelta
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from core.ai_client import generate_json
+from core.auth import get_current_user_id, get_admin_client
 
 router = APIRouter()
 
@@ -31,6 +30,39 @@ MOCK_ACCOUNT_DATA = {
     "top_pages": [{"url": "/products/leather-shoes", "clicks": 340, "avg_position": 14.2}],
     "instagram_last_post_days_ago": 32,
 }
+
+
+def _load_gsc_account(db, user_id: str) -> dict:
+    """Fetches the user's stored Search Console connection and rebuilds
+    Google credentials with the refresh token, so expired access tokens
+    auto-refresh instead of 401ing."""
+    result = (
+        db.table("connected_accounts")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("platform", "google_search_console")
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(
+            status_code=404,
+            detail="No Search Console account connected. Use 'Connect Search Console' first.",
+        )
+    account = result.data[0]
+    if not account.get("account_label"):
+        raise HTTPException(
+            status_code=400,
+            detail="No Search Console site chosen yet — set it right after connecting.",
+        )
+    creds = Credentials(
+        token=account["access_token"],
+        refresh_token=account.get("refresh_token"),
+        token_uri=account.get("token_uri"),
+        client_id=account.get("client_id"),
+        client_secret=account.get("client_secret"),
+        scopes=account.get("scopes", "").split(" ") if account.get("scopes") else None,
+    )
+    return account, creds
 
 
 @router.get("/mock-report")
@@ -57,25 +89,22 @@ def mock_report():
 
 
 @router.get("/search-console-report")
-def search_console_report(site_url: str, access_token: str):
+def search_console_report(user_id: str = Depends(get_current_user_id)):
     """
-    Real Phase-2 endpoint: pulls actual Search Console data and runs it
-    through the same AI analysis as the mock report.
+    Real audit: pulls the logged-in user's stored Search Console account,
+    fetches actual page/query ranking data for the last 30 days, runs it
+    through the AI, saves the report to seo_reports, and returns it.
+    """
+    db = get_admin_client()
+    account, creds = _load_gsc_account(db, user_id)
 
-    `site_url` must be a property already verified in the user's Search
-    Console (e.g. "https://example.com/" or "sc-domain:example.com").
-    `access_token` comes from the /auth/google/login -> /auth/google/callback
-    flow (swap this for a lookup from `connected_accounts` once user auth
-    and token storage are wired up).
-    """
     try:
-        creds = Credentials(token=access_token)
         service = build("searchconsole", "v1", credentials=creds)
         start_date, end_date = _last_30_days()
         response = (
             service.searchanalytics()
             .query(
-                siteUrl=site_url,
+                siteUrl=account["account_label"],
                 body={
                     "startDate": start_date,
                     "endDate": end_date,
@@ -100,4 +129,19 @@ def search_console_report(site_url: str, access_token: str):
             '"recommended_actions" (array of 3-5 short, specific, actionable strings).'
         ),
     )
+
+    # Best-effort save of the report for history (never fails the request).
+    try:
+        db.table("seo_reports").insert(
+            {
+                "user_id": user_id,
+                "seo_score": data.get("seo_score"),
+                "findings": data.get("findings", []),
+                "recommended_actions": data.get("recommended_actions", []),
+            }
+        ).execute()
+    except Exception:
+        pass
+
+    data["site_url"] = account["account_label"]
     return data

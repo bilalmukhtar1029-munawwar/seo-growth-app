@@ -28,7 +28,8 @@ router = APIRouter()
 # instagram_basic + instagram_manage_insights cover reading posts/engagement;
 # pages_show_list is required to find the Instagram Business account behind a Page.
 SCOPES = "instagram_basic,instagram_manage_insights,pages_show_list"
-GRAPH_VERSION = "v20.0"
+# Keep in sync with core/instagram_client.py — Meta deprecates old versions.
+GRAPH_VERSION = "v21.0"
 
 
 @router.get("/meta/login")
