@@ -118,17 +118,20 @@ def search_console_report(user_id: str = Depends(get_current_user_id)):
         raise HTTPException(status_code=502, detail=f"Search Console fetch failed: {e}")
 
     rows = response.get("rows", [])
-    data = generate_json(
-        system_prompt="You are a world-class SEO auditor. Be specific and actionable.",
-        user_prompt=(
-            f"Here is real Google Search Console data (page/query, clicks, impressions, "
-            f"CTR, position) for the last 30 days: {rows}\n\n"
-            "Analyze it and return JSON with keys: "
-            '"seo_score" (integer 0-100), '
-            '"findings" (array of 3-5 short strings describing specific problems), '
-            '"recommended_actions" (array of 3-5 short, specific, actionable strings).'
-        ),
-    )
+    try:
+        data = generate_json(
+            system_prompt="You are a world-class SEO auditor. Be specific and actionable.",
+            user_prompt=(
+                f"Here is real Google Search Console data (page/query, clicks, impressions, "
+                f"CTR, position) for the last 30 days: {rows}\n\n"
+                "Analyze it and return JSON with keys: "
+                '"seo_score" (integer 0-100), '
+                '"findings" (array of 3-5 short strings describing specific problems), '
+                '"recommended_actions" (array of 3-5 short, specific, actionable strings).'
+            ),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI analysis failed: {e}")
 
     # Best-effort save of the report for history (never fails the request).
     try:

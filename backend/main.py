@@ -14,6 +14,9 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
 
 from routers import content_gen, audit, google_auth, meta_auth, linkedin_auth, feed, internal
 
@@ -37,6 +40,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc):
+    """
+    Any unhandled exception becomes a clean JSON 500.
+
+    Without this, Starlette's raw 500 response bypasses the CORS middleware,
+    so browsers report a confusing "No Access-Control-Allow-Origin header"
+    error instead of the real server error. With it, the frontend gets a
+    proper CORS-enabled JSON error and can show/fallback gracefully.
+    """
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {exc}"},
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 app.include_router(content_gen.router, prefix="/generate", tags=["Content Generation"])
 app.include_router(audit.router, prefix="/audit", tags=["SEO Audit"])
