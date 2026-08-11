@@ -59,7 +59,7 @@ calls your backend once a week to run the same scan.
    (paste any random string when prompted, then `fastapi deploy`)
 
 2. **Sign up at cron-job.org** (free, no card) → Create cronjob
-   - URL: `https://bilaye.fastapicloud.dev/internal/run-weekly-scan`
+   - URL: `https://bilaye-63810171.fastapicloud.dev/internal/run-weekly-scan`
      (swap in your actual FastAPI Cloud URL)
    - Method: `POST`
    - Schedule: weekly, whatever day/time you like
