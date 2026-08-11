@@ -77,7 +77,7 @@ def linkedin_callback(code: str, state: str | None = None):
         resp.raise_for_status()
         access_token = resp.json()["access_token"]
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Token exchange failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Token exchange failed: {e}")
 
     if not state:
         return {"status": "connected (not saved — no user_id in state)", "access_token": access_token}
@@ -93,7 +93,7 @@ def linkedin_callback(code: str, state: str | None = None):
             on_conflict="user_id,platform",
         ).execute()
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to save connected account: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to save connected account: {e}")
 
     frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
     return RedirectResponse(f"{frontend_url}?connected=linkedin")

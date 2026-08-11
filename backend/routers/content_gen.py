@@ -67,7 +67,7 @@ def generate_blog(req: ContentRequest, user_id: str | None = Depends(get_optiona
         _save_draft(user_id, "blog", req.product_name, data)
         return BlogResponse(**data)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Generation failed: {e}")
 
 
 @router.post("/landing-page", response_model=LandingPageResponse, dependencies=[Depends(rate_limit)])
@@ -86,7 +86,7 @@ def generate_landing_page(req: ContentRequest, user_id: str | None = Depends(get
         _save_draft(user_id, "landing_page", req.product_name, data)
         return LandingPageResponse(**data)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Generation failed: {e}")
 
 
 @router.post("/ad", response_model=AdResponse, dependencies=[Depends(rate_limit)])
@@ -105,7 +105,7 @@ def generate_ad(req: ContentRequest, user_id: str | None = Depends(get_optional_
         _save_draft(user_id, "ad", req.product_name, data)
         return AdResponse(**data)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Generation failed: {e}")
 
 
 @router.post("/video-script", response_model=VideoScriptResponse, dependencies=[Depends(rate_limit)])
@@ -124,4 +124,4 @@ def generate_video_script(req: ContentRequest, user_id: str | None = Depends(get
         _save_draft(user_id, "video_script", req.product_name, data)
         return VideoScriptResponse(**data)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Generation failed: {e}")

@@ -29,7 +29,7 @@ def get_auto_feed(user_id: str = Depends(get_current_user_id)):
         )
         return result.data
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to load feed: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to load feed: {e}")
 
 
 @router.post("/{draft_id}/approve")
@@ -78,7 +78,7 @@ def approve_draft(draft_id: str, user_id: str = Depends(get_current_user_id)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to approve draft: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to approve draft: {e}")
 
 
 @router.delete("/{draft_id}")
@@ -89,4 +89,4 @@ def dismiss_draft(draft_id: str, user_id: str = Depends(get_current_user_id)):
         ).execute()
         return {"status": "dismissed"}
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to dismiss draft: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to dismiss draft: {e}")

@@ -76,7 +76,7 @@ def meta_callback(code: str, state: str | None = None):
         access_token = resp.json()["access_token"]
     except Exception as e:
         raise HTTPException(
-            status_code=502,
+            status_code=400,
             detail=(
                 f"Token exchange failed: {e}. If your app hasn't passed App Review yet, "
                 "make sure this Facebook account is added as a Tester in your app's Roles."
@@ -97,7 +97,7 @@ def meta_callback(code: str, state: str | None = None):
             on_conflict="user_id,platform",
         ).execute()
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to save connected account: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to save connected account: {e}")
 
     frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
     return RedirectResponse(f"{frontend_url}?connected=instagram")

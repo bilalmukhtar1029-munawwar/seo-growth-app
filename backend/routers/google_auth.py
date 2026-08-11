@@ -95,7 +95,7 @@ def google_callback(code: str, state: str | None = None):
             on_conflict="user_id,platform",
         ).execute()
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to save connected account: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to save connected account: {e}")
 
     frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
     return RedirectResponse(f"{frontend_url}?connected=google_search_console")
@@ -114,5 +114,5 @@ def set_site_url(user_id: str, site_url: str):
             "user_id", user_id
         ).eq("platform", "google_search_console").execute()
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to save site URL: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to save site URL: {e}")
     return {"status": "saved", "site_url": site_url}

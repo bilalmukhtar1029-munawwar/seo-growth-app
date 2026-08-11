@@ -115,7 +115,7 @@ def search_console_report(user_id: str = Depends(get_current_user_id)):
             .execute()
         )
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Search Console fetch failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Search Console fetch failed: {e}")
 
     rows = response.get("rows", [])
     try:
@@ -131,7 +131,7 @@ def search_console_report(user_id: str = Depends(get_current_user_id)):
             ),
         )
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI analysis failed: {e}")
+        raise HTTPException(status_code=400, detail=f"AI analysis failed: {e}")
 
     # Best-effort save of the report for history (never fails the request).
     try:
