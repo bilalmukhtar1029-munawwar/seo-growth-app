@@ -26,6 +26,8 @@ export default function Home() {
   const [runCount, setRunCount] = useState(0);
   const [audit, setAudit] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [ads, setAds] = useState(null);
+  const [adsLoading, setAdsLoading] = useState(false);
   const [session, setSession] = useState(null);
   const [sessionChecked, setSessionChecked] = useState(false);
 
@@ -96,7 +98,34 @@ export default function Home() {
   useEffect(() => {
     if (!sessionChecked) return;
     loadMockAudit();
+    loadAdsHealth();
   }, [session, sessionChecked]);
+
+  const loadAdsHealth = async () => {
+    setAdsLoading(true);
+    try {
+      // Logged in + Meta connected -> real ads data. Otherwise demo report.
+      let data = null;
+      if (session?.access_token) {
+        const real = await fetch(`${BACKEND_URL}/ads/health`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (real.ok) {
+          data = await real.json();
+          setAds(data);
+          setAdsLoading(false);
+          return;
+        }
+      }
+      const res = await fetch(`${BACKEND_URL}/ads/mock-report`);
+      data = await res.json();
+      setAds(data);
+    } catch (e) {
+      // silent - ads panel is a bonus, not the main flow
+    } finally {
+      setAdsLoading(false);
+    }
+  };
 
   const handleChange = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -154,6 +183,12 @@ export default function Home() {
                 className="font-mono text-xs border border-line rounded px-3 py-1.5 text-mist hover:text-white hover:border-mist transition"
               >
                 Connect Search Console
+              </a>
+              <a
+                href={`${BACKEND_URL}/auth/meta/login?user_id=${session.user.id}`}
+                className="font-mono text-xs border border-line rounded px-3 py-1.5 text-mist hover:text-white hover:border-mist transition"
+              >
+                Connect Meta Ads
               </a>
               <a
                 href={`${BACKEND_URL}/auth/linkedin/login?user_id=${session.user.id}`}
@@ -219,6 +254,61 @@ export default function Home() {
             {session
               ? "Live data from your connected Search Console account (falls back to sample data if none connected)."
               : "Based on sample data — log in and click \"Connect Search Console\" for your real numbers."}
+          </p>
+        </div>
+      </div>
+
+      {/* Ads Health strip — real Meta ads data when connected, demo otherwise */}
+      <div className="max-w-6xl mx-auto px-8 pt-6">
+        <div className="bg-panel border border-line rounded-lg px-6 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-mono text-xs uppercase tracking-wide text-mist">
+              Ads health {adsLoading ? "(loading…)" : ""}
+            </span>
+            {ads?.ads_score !== undefined && (
+              <span className="font-display text-2xl text-signal">{ads.ads_score}/100</span>
+            )}
+          </div>
+          {ads?.label && (
+            <div className="font-mono text-[11px] uppercase tracking-wide mb-3">
+              <span
+                className={`px-2 py-0.5 rounded ${
+                  ads.label === "healthy"
+                    ? "bg-green-900/40 text-green-300"
+                    : ads.label === "needs attention"
+                    ? "bg-amber-900/40 text-amber-300"
+                    : "bg-red-900/40 text-red-300"
+                }`}
+              >
+                {ads.label}
+              </span>
+            </div>
+          )}
+          {ads && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="text-mist text-xs mb-1">Findings</div>
+                <ul className="space-y-1 text-gray-200">
+                  {ads.findings?.map((f, i) => <li key={i}>• {f}</li>)}
+                </ul>
+              </div>
+              <div>
+                <div className="text-mist text-xs mb-1">Recommended actions</div>
+                <ul className="space-y-1 text-gray-200">
+                  {ads.recommended_actions?.map((a, i) => <li key={i}>→ {a}</li>)}
+                </ul>
+              </div>
+            </div>
+          )}
+          {ads?.commentary && (
+            <p className="text-sm text-gray-300 italic mt-3 border-t border-line pt-3">
+              {ads.commentary}
+            </p>
+          )}
+          <p className="font-mono text-[11px] text-mist mt-3">
+            {ads?.is_mock
+              ? "Sample data — log in and click \"Connect Meta Ads\" to analyze your real campaigns."
+              : "Live analysis of your connected Meta ad account."}
           </p>
         </div>
       </div>

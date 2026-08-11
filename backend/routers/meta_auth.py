@@ -27,7 +27,8 @@ router = APIRouter()
 
 # instagram_basic + instagram_manage_insights cover reading posts/engagement;
 # pages_show_list is required to find the Instagram Business account behind a Page.
-SCOPES = "instagram_basic,instagram_manage_insights,pages_show_list"
+# ads_read lets the Ads Health panel pull campaigns/insights from ad accounts.
+SCOPES = "instagram_basic,instagram_manage_insights,pages_show_list,ads_read"
 # Keep in sync with core/instagram_client.py — Meta deprecates old versions.
 GRAPH_VERSION = "v21.0"
 

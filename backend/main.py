@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 
-from routers import content_gen, audit, google_auth, meta_auth, linkedin_auth, feed, internal
+from routers import content_gen, audit, google_auth, meta_auth, linkedin_auth, feed, internal, ads_health
 
 app = FastAPI(
     title="SEO & Social Growth Engine API",
@@ -77,6 +77,7 @@ app.include_router(meta_auth.router, prefix="/auth", tags=["Meta OAuth (needs Ap
 app.include_router(linkedin_auth.router, prefix="/auth", tags=["LinkedIn OAuth"])
 app.include_router(feed.router, prefix="/feed", tags=["Auto-Suggested Content Feed"])
 app.include_router(internal.router, prefix="/internal", tags=["Internal — free weekly scan trigger"])
+app.include_router(ads_health.router, prefix="/ads", tags=["Ads Health"])
 
 
 @app.get("/")
