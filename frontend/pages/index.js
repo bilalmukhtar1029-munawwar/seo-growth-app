@@ -30,6 +30,8 @@ export default function Home() {
   const [adsLoading, setAdsLoading] = useState(false);
   const [session, setSession] = useState(null);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [linkedinStatus, setLinkedinStatus] = useState(null);
+  const [banner, setBanner] = useState(null);
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -50,10 +52,42 @@ export default function Home() {
     await supabase.auth.signOut();
   };
 
+  const loadLinkedinStatus = async () => {
+    if (!session) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/linkedin/status`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) setLinkedinStatus(await res.json());
+    } catch (e) {
+      // header stays on the plain "Connect LinkedIn" state
+    }
+  };
+
+  useEffect(() => {
+    if (session) loadLinkedinStatus();
+  }, [session]);
+
+  const disconnectLinkedin = async () => {
+    if (!window.confirm("Disconnect LinkedIn?")) return;
+    try {
+      await fetch(`${BACKEND_URL}/auth/linkedin/disconnect`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      setLinkedinStatus({ connected: false });
+      setBanner({ type: "success", text: "LinkedIn disconnected." });
+    } catch (e) {
+      setBanner({ type: "error", text: "Couldn't disconnect LinkedIn." });
+    }
+  };
+
   useEffect(() => {
     if (!session) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("connected") === "google_search_console") {
+    const connected = params.get("connected");
+    const error = params.get("error");
+    if (connected === "google_search_console") {
       const siteUrl = window.prompt(
         "Connected! Which verified Search Console property should we monitor? " +
           "(e.g. https://example.com/ or sc-domain:example.com)"
@@ -64,7 +98,15 @@ export default function Home() {
           { method: "POST" }
         );
       }
+      setBanner({ type: "success", text: "Search Console connected." });
+    } else if (connected === "linkedin") {
+      setBanner({ type: "success", text: "LinkedIn connected." });
+    } else if (error) {
+      setBanner({ type: "error", text: `Connection failed (${error}). Please try again.` });
+    }
+    if (connected || error) {
       window.history.replaceState({}, "", "/");
+      loadLinkedinStatus();
     }
   }, [session]);
 
@@ -190,12 +232,26 @@ export default function Home() {
               >
                 Connect Meta Ads
               </a>
-              <a
-                href={`${BACKEND_URL}/auth/linkedin/login?user_id=${session.user.id}`}
-                className="font-mono text-xs border border-line rounded px-3 py-1.5 text-mist hover:text-white hover:border-mist transition"
-              >
-                Connect LinkedIn
-              </a>
+              {linkedinStatus?.connected ? (
+                <span className="flex items-center gap-2 font-mono text-xs text-mist">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                  LinkedIn: {linkedinStatus.account_label || "connected"}
+                  <button
+                    onClick={disconnectLinkedin}
+                    title="Disconnect LinkedIn"
+                    className="border border-line rounded px-2 py-1 text-mist hover:text-red-400 hover:border-red-400/50 transition"
+                  >
+                    Disconnect
+                  </button>
+                </span>
+              ) : (
+                <a
+                  href={`${BACKEND_URL}/auth/linkedin/login?user_id=${session.user.id}`}
+                  className="font-mono text-xs border border-line rounded px-3 py-1.5 text-mist hover:text-white hover:border-mist transition"
+                >
+                  Connect LinkedIn
+                </a>
+              )}
               <Link
                 href="/feed"
                 className="font-mono text-xs border border-line rounded px-3 py-1.5 text-mist hover:text-white hover:border-mist transition"
@@ -222,6 +278,28 @@ export default function Home() {
           )}
         </div>
       </header>
+
+      {/* OAuth result banner — success or failure after a connect attempt */}
+      {banner && (
+        <div className="max-w-6xl mx-auto px-8 pt-6">
+          <div
+            className={`border rounded-lg px-4 py-3 font-mono text-sm ${
+              banner.type === "error"
+                ? "border-red-500/40 bg-red-950/40 text-red-300"
+                : "border-green-500/40 bg-green-950/40 text-green-300"
+            }`}
+          >
+            {banner.text}
+            <button
+              onClick={() => setBanner(null)}
+              className="float-right text-mist hover:text-white transition"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Audit strip — mock data until Search Console is connected */}
       <div className="max-w-6xl mx-auto px-8 pt-8">

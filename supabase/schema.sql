@@ -25,7 +25,7 @@ create table if not exists seo_reports (
 create table if not exists content_drafts (
     id uuid primary key default gen_random_uuid(),
     user_id uuid references auth.users(id) on delete cascade,
-    content_type text not null check (content_type in ('blog', 'landing_page', 'ad', 'video_script')),
+    content_type text not null check (content_type in ('blog', 'landing_page', 'ad', 'video_script', 'linkedin_post')),
     source text not null check (source in ('manual', 'auto')),
     product_name text,
     payload jsonb not null,
@@ -72,3 +72,10 @@ create index if not exists connected_accounts_user_idx
 create policy "Users read their own instagram snapshot"
     on instagram_snapshots for select
     using (auth.uid() = user_id);
+
+-- Migration for databases created before the LinkedIn post suggestions feature:
+-- the check constraint above already includes 'linkedin_post' for fresh
+-- installs; this updates existing databases without recreating the table.
+alter table content_drafts drop constraint if exists content_drafts_content_type_check;
+alter table content_drafts add constraint content_drafts_content_type_check
+    check (content_type in ('blog', 'landing_page', 'ad', 'video_script', 'linkedin_post'));

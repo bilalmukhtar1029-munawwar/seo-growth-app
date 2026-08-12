@@ -22,6 +22,15 @@ Instagram scanning (scan_all_instagram_users / _scan_one_instagram_user) works
 the same way: pulls recent posts + engagement via the Meta Graph API and saves
 a rollup snapshot to `instagram_snapshots`, which the dashboard's SEO Snapshot
 card reads from instead of showing sample data.
+
+Per-user variants (scan_content_gaps_for_user / scan_linkedin_suggestions_for_user)
+exist so the frontend's "Run scan now" button (POST /feed/scan) can trigger a
+scan for the logged-in user instantly instead of waiting for the weekly cron.
+
+LinkedIn suggestions need no Marketing API review: they repurpose content the
+user already approved (from the generator or a previous scan) into ready-to-post
+LinkedIn updates, so the auto-suggestion feed fills for LinkedIn-connected users
+too.
 """
 from datetime import date, timedelta
 
@@ -124,6 +133,146 @@ def _scan_one_user(db, account: dict) -> dict:
         drafted += 1
 
     return {"user_id": user_id, "gaps_found": len(gaps), "drafts_created": drafted}
+
+
+def scan_content_gaps_for_user(user_id: str) -> dict:
+    """
+    Runs the Search Console content-gap scan for one user only — the version
+    the frontend's "Run scan now" button calls.
+    """
+    db = get_admin_client()
+    accounts = (
+        db.table("connected_accounts")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("platform", "google_search_console")
+        .execute()
+    )
+    if not accounts.data:
+        return {"user_id": user_id, "skipped": "no Search Console account connected"}
+    return _scan_one_user(db, accounts.data[0])
+
+
+LINKEDIN_POST_CONTENT_TYPE = "linkedin_post"
+
+
+def scan_linkedin_suggestions_for_user(user_id: str) -> dict:
+    """
+    Turns the user's approved content into LinkedIn post drafts.
+
+    Works with tier-1 LinkedIn access (OpenID Connect — no app review): we
+    don't read their LinkedIn feed, we write *for* it, from content they've
+    already approved elsewhere in the app. Each approved piece becomes one
+    auto-drafted LinkedIn post in the suggestion feed.
+
+    Re-running is safe: pieces that already have a pending linkedin_post
+    draft are skipped, so you don't get duplicates.
+    """
+    db = get_admin_client()
+
+    approved = (
+        db.table("content_drafts")
+        .select("product_name, payload")
+        .eq("user_id", user_id)
+        .in_("status", ["approved", "published"])
+        .order("created_at", desc=True)
+        .limit(5)
+        .execute()
+    )
+    if not approved.data:
+        return {"user_id": user_id, "skipped": "no approved content yet — approve something first"}
+
+    existing = {
+        row["product_name"]
+        for row in (
+            db.table("content_drafts")
+            .select("product_name")
+            .eq("user_id", user_id)
+            .eq("source", "auto")
+            .eq("content_type", LINKEDIN_POST_CONTENT_TYPE)
+            .eq("status", "draft")
+            .execute()
+        ).data or []
+    }
+
+    drafts_created = 0
+    skipped_dupes = 0
+    for piece in approved.data[:3]:  # cap at 3 posts per scan
+        source_title = piece.get("product_name") or "your content"
+        if source_title in existing:
+            skipped_dupes += 1
+            continue
+        payload = piece.get("payload") or {}
+        try:
+            post = generate_json(
+                system_prompt=(
+                    "You are a LinkedIn ghostwriter. You turn existing long-form "
+                    "content into native LinkedIn posts: a strong hook, a personal "
+                    "tone, one clear takeaway, no salesy clichés, and a soft "
+                    "call-to-action."
+                ),
+                user_prompt=(
+                    "Turn this content into ONE LinkedIn post.\n\n"
+                    f"Title: {source_title}\n"
+                    f"Meta description: {payload.get('meta_description', '')}\n"
+                    f"Body:\n{(payload.get('body_markdown') or '')[:1500]}\n\n"
+                    'Return JSON with keys: "hook" (a first line that stops the '
+                    'scroll, under 200 chars), "post_text" (the body, 150-250 '
+                    'words, plain paragraphs with line breaks), and "hashtags" '
+                    '(3-5 strings, no leading #).'
+                ),
+                max_tokens=1200,
+            )
+            hashtags = " ".join(f"#{h}" for h in (post.get("hashtags") or []))
+            body = "\n\n".join(
+                filter(None, [post.get("hook"), post.get("post_text"), hashtags])
+            )
+            db.table("content_drafts").insert(
+                {
+                    "user_id": user_id,
+                    "content_type": LINKEDIN_POST_CONTENT_TYPE,
+                    "source": "auto",
+                    "product_name": source_title,
+                    "payload": {
+                        "title": f"LinkedIn post: {source_title}",
+                        "body_markdown": body,
+                        "meta_description": (
+                            "A LinkedIn post turning your approved content into "
+                            "a conversation starter."
+                        ),
+                    },
+                    "status": "draft",
+                }
+            ).execute()
+            drafts_created += 1
+        except Exception as e:
+            # One flaky AI call shouldn't sink the whole scan.
+            return {"user_id": user_id, "error": str(e), "drafts_created": drafts_created}
+
+    return {
+        "user_id": user_id,
+        "drafts_created": drafts_created,
+        "skipped_duplicates": skipped_dupes,
+        "eligible_content": len(approved.data),
+    }
+
+
+def scan_all_users_linkedin_suggestions() -> list[dict]:
+    """Weekly-cron version: LinkedIn post drafts for every user with approved content."""
+    db = get_admin_client()
+    users = db.table("content_drafts").select("user_id").in_("status", ["approved", "published"]).execute()
+    seen = set()
+    results = []
+    for row in users.data or []:
+        uid = row["user_id"]
+        if uid in seen:
+            continue
+        seen.add(uid)
+        try:
+            results.append(scan_linkedin_suggestions_for_user(uid))
+        except Exception as e:
+            results.append({"user_id": uid, "error": str(e)})
+    return results
 
 
 def scan_all_instagram_users() -> list[dict]:

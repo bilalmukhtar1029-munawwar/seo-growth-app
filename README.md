@@ -25,15 +25,23 @@ no credit card used anywhere.
   Review first (their process, not something buildable in code)
 - **LinkedIn OAuth**, fully coded (`backend/routers/linkedin_auth.py`) — identity
   login works with no review; real post/engagement data needs LinkedIn's Marketing
-  Developer Platform approval
+  Developer Platform approval. Connect saves the member's name + email (shown in the
+  header), stores a refresh token (`r_refresh_token` scope) so the access token can
+  be renewed via `POST /auth/linkedin/refresh` without re-consent, and exposes
+  `GET /auth/linkedin/status` + `DELETE /auth/linkedin/disconnect` for the UI
 - **Module 2 — the auto-generator, free version** (`backend/core/tasks.py` +
   `backend/routers/internal.py`) — scans each connected user's Search Console data,
   asks the AI to flag underperforming pages, and auto-drafts a blog post per gap
   into `content_drafts` with `source='auto'`. Triggered weekly by a free external
   cron job hitting `POST /internal/run-weekly-scan` — see "Free weekly auto-scan
   setup" below
+- **LinkedIn auto-suggestions** — the scan also turns each user's *approved*
+  content into ready-to-post LinkedIn updates (no Marketing API review needed).
+  They land in the same feed as `linkedin_post` drafts
 - **Auto-Suggested Content Feed** (`frontend/pages/feed.js`,
-  `backend/routers/feed.py`) — lists pending auto-drafts with Approve/Dismiss
+  `backend/routers/feed.py`) — lists pending auto-drafts with Approve/Dismiss, and
+  has a **Run scan now** button (`POST /feed/scan`) that triggers an instant scan
+  for the logged-in user instead of waiting for the weekly cron
 - **WordPress publishing** (`backend/core/wordpress_client.py`) — approving a blog
   draft pushes it to a connected WordPress site as a draft post (no app review
   needed, just an Application Password from WP admin)
@@ -69,8 +77,10 @@ calls your backend once a week to run the same scan.
 3. That's it — it'll run weekly for free, dropping auto-drafted content into each
    connected user's Feed page.
 
-To test it immediately instead of waiting a week, send a POST request with that
-header yourself (Postman, curl, or even cron-job.org's "Run now" button once set up).
+To test it immediately instead of waiting a week, log in and hit **Run scan now**
+on the Feed page (`POST /feed/scan`, authenticated) — or send a POST request with
+the secret header yourself (Postman, curl, or cron-job.org's "Run now" button once
+set up).
 
 ## Marketing page
 `marketing/index.html` — standalone landing page for the product itself (hero,
@@ -111,6 +121,8 @@ pytest tests/
 **2. Supabase (required, free)** — supabase.com → New project → Settings → API →
 copy **Project URL** and **service_role** key into backend, **Project URL** +
 **anon public** key into frontend. Run `supabase/schema.sql` in the SQL Editor.
+If you already ran an older copy of the schema, re-run it — it now includes an
+idempotent migration that adds `linkedin_post` to the `content_drafts` type check.
 
 **3. Google Search Console OAuth (free, no review needed)** —
 console.cloud.google.com → new project → enable "Google Search Console API" →

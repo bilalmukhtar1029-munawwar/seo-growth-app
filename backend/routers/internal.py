@@ -13,7 +13,11 @@ Both share the same X-Scan-Secret protection.
 """
 import os
 from fastapi import APIRouter, HTTPException, Header
-from core.tasks import scan_all_users_for_content_gaps, scan_all_instagram_users
+from core.tasks import (
+    scan_all_users_for_content_gaps,
+    scan_all_users_linkedin_suggestions,
+    scan_all_instagram_users,
+)
 
 router = APIRouter()
 
@@ -32,7 +36,10 @@ def _check_secret(x_scan_secret: str):
 @router.post("/run-weekly-scan")
 def run_weekly_scan(x_scan_secret: str = Header(default=None)):
     _check_secret(x_scan_secret)
-    results = scan_all_users_for_content_gaps()
+    results = {
+        "search_console": scan_all_users_for_content_gaps(),
+        "linkedin": scan_all_users_linkedin_suggestions(),
+    }
     return {"status": "completed", "results": results}
 
 
