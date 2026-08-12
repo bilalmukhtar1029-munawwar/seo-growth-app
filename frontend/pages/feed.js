@@ -8,7 +8,7 @@ const TYPE_LABELS = {
   blog: "Blog",
   landing_page: "Landing Page",
   ad: "Ad",
-  video_script: "Video Script",
+  video_script: "Video Ad",
   linkedin_post: "LinkedIn Post",
 };
 
@@ -78,6 +78,13 @@ export default function Feed() {
       else if (li.drafts_created !== undefined)
         bits.push(`LinkedIn: ${li.drafts_created} draft(s)${li.skipped_duplicates ? ` (${li.skipped_duplicates} duplicate(s) skipped)` : ""}`);
       else if (li.skipped) bits.push(`LinkedIn: ${li.skipped}`);
+    }
+    const va = scanResult.video_ads;
+    if (va) {
+      if (va.error) bits.push(`Video ads: error (${va.error})`);
+      else if (va.drafts_created !== undefined)
+        bits.push(`Video ads: ${va.drafts_created} draft(s)${va.skipped_duplicates ? ` (${va.skipped_duplicates} duplicate(s) skipped)` : ""}`);
+      else if (va.skipped) bits.push(`Video ads: ${va.skipped}`);
     }
     return bits.length ? bits.join(" • ") : "Scan done — nothing new to add.";
   };
@@ -165,7 +172,7 @@ export default function Feed() {
             <p className="text-xs">
               Connect <span className="text-signal">Search Console</span> to draft blog posts from
               underperforming pages, or connect <span className="text-signal">LinkedIn</span> to
-              turn your approved content into LinkedIn posts — both from the generator page.
+              turn your approved content into LinkedIn posts and video ads — both from the generator page.
             </p>
           </div>
         )}

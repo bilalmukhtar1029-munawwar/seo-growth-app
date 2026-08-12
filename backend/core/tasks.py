@@ -30,7 +30,9 @@ scan for the logged-in user instantly instead of waiting for the weekly cron.
 LinkedIn suggestions need no Marketing API review: they repurpose content the
 user already approved (from the generator or a previous scan) into ready-to-post
 LinkedIn updates, so the auto-suggestion feed fills for LinkedIn-connected users
-too.
+too. Video ads work the same way: approved content becomes 30-second video ad
+scripts (Meta/TikTok/YouTube Shorts style), so every approved piece can be
+repurposed into blog, LinkedIn post, and video ad suggestions.
 """
 from datetime import date, timedelta
 
@@ -257,6 +259,113 @@ def scan_linkedin_suggestions_for_user(user_id: str) -> dict:
     }
 
 
+def scan_video_ads_for_user(user_id: str) -> dict:
+    """
+    Turns the user's approved content into 30-second video ad scripts.
+
+    Same repurposing pattern as scan_linkedin_suggestions_for_user: for each
+    piece of approved content (up to 3 per scan) the AI writes a short
+    direct-response video ad (hook, 3-5 scenes, CTA) and it lands in the
+    suggestion feed as a `video_script` draft. Re-running skips pieces that
+    already have a pending video ad draft.
+    """
+    db = get_admin_client()
+
+    approved = (
+        db.table("content_drafts")
+        .select("product_name, payload")
+        .eq("user_id", user_id)
+        .in_("status", ["approved", "published"])
+        .order("created_at", desc=True)
+        .limit(5)
+        .execute()
+    )
+    if not approved.data:
+        return {"user_id": user_id, "skipped": "no approved content yet — approve something first"}
+
+    existing = {
+        row["product_name"]
+        for row in (
+            db.table("content_drafts")
+            .select("product_name")
+            .eq("user_id", user_id)
+            .eq("source", "auto")
+            .eq("content_type", "video_script")
+            .eq("status", "draft")
+            .execute()
+        ).data or []
+    }
+
+    drafts_created = 0
+    skipped_dupes = 0
+    for piece in approved.data[:3]:
+        source_title = piece.get("product_name") or "your content"
+        if source_title in existing:
+            skipped_dupes += 1
+            continue
+        payload = piece.get("payload") or {}
+        try:
+            ad = generate_json(
+                system_prompt=(
+                    "You are a direct-response video ad scriptwriter. You turn "
+                    "existing content into scroll-stopping 30-second video ads for "
+                    "Meta, TikTok, and YouTube Shorts: a hook in the first 2 "
+                    "seconds, one clear value proposition, and a single call-to-action."
+                ),
+                user_prompt=(
+                    "Turn this content into ONE 30-second video ad script.\n\n"
+                    f"Title: {source_title}\n"
+                    f"Meta description: {payload.get('meta_description', '')}\n"
+                    f"Body:\n{(payload.get('body_markdown') or '')[:1500]}\n\n"
+                    'Return JSON with keys: "hook" (the first spoken line, under '
+                    '160 chars), "scenes" (an array of 3-5 objects, each with '
+                    '"scene" — a short label, "visual_suggestion" — what appears '
+                    'on screen, and "voiceover_text" — 1-2 spoken sentences), and '
+                    '"cta_text" (the end-screen call-to-action, under 60 chars).'
+                ),
+                max_tokens=1500,
+            )
+            scenes = ad.get("scenes") or []
+            body_parts = [f"HOOK: {ad.get('hook', '')}"]
+            for i, s in enumerate(scenes, 1):
+                body_parts.append(
+                    f"SCENE {i} — {s.get('scene', '')}\n"
+                    f"Visual: {s.get('visual_suggestion', '')}\n"
+                    f"Voiceover: {s.get('voiceover_text', '')}"
+                )
+            body_parts.append(f"CTA: {ad.get('cta_text', '')}")
+            db.table("content_drafts").insert(
+                {
+                    "user_id": user_id,
+                    "content_type": "video_script",
+                    "source": "auto",
+                    "product_name": source_title,
+                    "payload": {
+                        "title": f"Video ad: {source_title}",
+                        "body_markdown": "\n\n".join(body_parts),
+                        "meta_description": (
+                            "A 30-second video ad turning your approved content "
+                            "into a scroll-stopping commercial."
+                        ),
+                        "hook": ad.get("hook"),
+                        "scenes": scenes,
+                        "cta_text": ad.get("cta_text"),
+                    },
+                    "status": "draft",
+                }
+            ).execute()
+            drafts_created += 1
+        except Exception as e:
+            return {"user_id": user_id, "error": str(e), "drafts_created": drafts_created}
+
+    return {
+        "user_id": user_id,
+        "drafts_created": drafts_created,
+        "skipped_duplicates": skipped_dupes,
+        "eligible_content": len(approved.data),
+    }
+
+
 def scan_all_users_linkedin_suggestions() -> list[dict]:
     """Weekly-cron version: LinkedIn post drafts for every user with approved content."""
     db = get_admin_client()
@@ -270,6 +379,24 @@ def scan_all_users_linkedin_suggestions() -> list[dict]:
         seen.add(uid)
         try:
             results.append(scan_linkedin_suggestions_for_user(uid))
+        except Exception as e:
+            results.append({"user_id": uid, "error": str(e)})
+    return results
+
+
+def scan_all_users_video_ads() -> list[dict]:
+    """Weekly-cron version: video ad drafts for every user with approved content."""
+    db = get_admin_client()
+    users = db.table("content_drafts").select("user_id").in_("status", ["approved", "published"]).execute()
+    seen = set()
+    results = []
+    for row in users.data or []:
+        uid = row["user_id"]
+        if uid in seen:
+            continue
+        seen.add(uid)
+        try:
+            results.append(scan_video_ads_for_user(uid))
         except Exception as e:
             results.append({"user_id": uid, "error": str(e)})
     return results

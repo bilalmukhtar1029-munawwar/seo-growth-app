@@ -38,6 +38,9 @@ no credit card used anywhere.
 - **LinkedIn auto-suggestions** — the scan also turns each user's *approved*
   content into ready-to-post LinkedIn updates (no Marketing API review needed).
   They land in the same feed as `linkedin_post` drafts
+- **Video ad auto-suggestions** — same repurposing: approved content becomes
+  30-second video ad scripts (`video_script` drafts, hook + scenes + CTA for
+  Meta/TikTok/YouTube Shorts), also in the suggestion feed
 - **Auto-Suggested Content Feed** (`frontend/pages/feed.js`,
   `backend/routers/feed.py`) — lists pending auto-drafts with Approve/Dismiss, and
   has a **Run scan now** button (`POST /feed/scan`) that triggers an instant scan

@@ -8,7 +8,11 @@ the frontend list them, and let the user approve or dismiss each one.
 from fastapi import APIRouter, HTTPException, Depends
 
 from core.auth import get_current_user_id, get_admin_client
-from core.tasks import scan_content_gaps_for_user, scan_linkedin_suggestions_for_user
+from core.tasks import (
+    scan_content_gaps_for_user,
+    scan_linkedin_suggestions_for_user,
+    scan_video_ads_for_user,
+)
 from core.wordpress_client import is_configured as wp_configured, publish_blog_post
 
 router = APIRouter()
@@ -22,6 +26,7 @@ def run_scan_now(user_id: str = Depends(get_current_user_id)):
     Runs whatever the user has connected:
       - Search Console  -> content-gap scan (blog drafts for underperforming pages)
       - LinkedIn        -> LinkedIn post drafts from their approved content
+      - Video ads       -> 30-second video ad scripts from their approved content
 
     Each scan is wrapped so one failing source doesn't kill the other.
     """
@@ -29,6 +34,7 @@ def run_scan_now(user_id: str = Depends(get_current_user_id)):
     for name, fn in (
         ("search_console", scan_content_gaps_for_user),
         ("linkedin", scan_linkedin_suggestions_for_user),
+        ("video_ads", scan_video_ads_for_user),
     ):
         try:
             results[name] = fn(user_id)

@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Header
 from core.tasks import (
     scan_all_users_for_content_gaps,
     scan_all_users_linkedin_suggestions,
+    scan_all_users_video_ads,
     scan_all_instagram_users,
 )
 
@@ -39,6 +40,7 @@ def run_weekly_scan(x_scan_secret: str = Header(default=None)):
     results = {
         "search_console": scan_all_users_for_content_gaps(),
         "linkedin": scan_all_users_linkedin_suggestions(),
+        "video_ads": scan_all_users_video_ads(),
     }
     return {"status": "completed", "results": results}
 
