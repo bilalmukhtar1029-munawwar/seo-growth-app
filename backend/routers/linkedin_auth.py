@@ -68,7 +68,14 @@ def _env_creds():
 
 @router.get("/linkedin/login")
 def linkedin_login(user_id: str | None = None):
-    client_id, _, redirect_uri = _env_creds()
+    try:
+        client_id, _, redirect_uri = _env_creds()
+    except HTTPException:
+        # Keys not added yet — send the user back to the app with a clear
+        # banner instead of a raw JSON 500 in their browser.
+        return RedirectResponse(
+            f"{_frontend_url()}?{FRONTEND_ERROR_PARAM}=linkedin_not_configured"
+        )
     auth_url = (
         "https://www.linkedin.com/oauth/v2/authorization"
         f"?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}"
@@ -145,6 +152,23 @@ def linkedin_callback(code: str, state: str | None = None):
         return RedirectResponse(f"{frontend_url}?{FRONTEND_ERROR_PARAM}=linkedin_auth_failed")
 
     return RedirectResponse(f"{frontend_url}?connected=linkedin")
+
+
+@router.get("/linkedin/config-status")
+def linkedin_config_status(user_id: str = Depends(get_current_user_id)):
+    """
+    True/false flags for what's configured — check this from the app after a
+    deploy to confirm the LinkedIn keys made it to the server, without digging
+    in server logs. Never reveals the secret values.
+    """
+    return {
+        "client_id_set": bool(os.environ.get("LINKEDIN_CLIENT_ID")),
+        "client_secret_set": bool(os.environ.get("LINKEDIN_CLIENT_SECRET")),
+        "redirect_uri": os.environ.get(
+            "LINKEDIN_OAUTH_REDIRECT_URI",
+            "http://localhost:8000/auth/linkedin/callback",
+        ),
+    }
 
 
 @router.get("/linkedin/status")
