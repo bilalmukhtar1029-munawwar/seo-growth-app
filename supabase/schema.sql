@@ -50,6 +50,12 @@ alter table seo_reports enable row level security;
 alter table content_drafts enable row level security;
 alter table instagram_snapshots enable row level security;
 
+-- Policies are dropped first so the whole file can be re-run safely
+-- (re-running is how existing databases pick up schema changes).
+drop policy if exists "Users manage their own connected accounts" on connected_accounts;
+drop policy if exists "Users manage their own seo reports" on seo_reports;
+drop policy if exists "Users manage their own content drafts" on content_drafts;
+
 create policy "Users manage their own connected accounts"
     on connected_accounts for all
     using (auth.uid() = user_id);
@@ -69,6 +75,7 @@ create index if not exists connected_accounts_user_idx
     on connected_accounts (user_id);
 
 -- Snapshot is read by the dashboard with the user's own JWT.
+drop policy if exists "Users read their own instagram snapshot" on instagram_snapshots;
 create policy "Users read their own instagram snapshot"
     on instagram_snapshots for select
     using (auth.uid() = user_id);
