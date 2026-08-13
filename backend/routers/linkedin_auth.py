@@ -107,14 +107,38 @@ def _format_account_label(profile: dict) -> str:
 
 
 @router.get("/linkedin/callback")
-def linkedin_callback(code: str, state: str | None = None):
+def linkedin_callback(
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+):
+    """
+    LinkedIn redirects here after the user logs in. On success we get
+    `code`; on any failure (cancelled, denied, bad scope...) we get
+    `error` instead — handle both and bounce back to the frontend with
+    a friendly `?error=` slug instead of a raw JSON 422.
+    """
     client_id, client_secret, redirect_uri = _env_creds()
     frontend_url = _frontend_url()
+
+    if error or not code:
+        if error in ("invalid_scope_error", "unauthorized_scope_error"):
+            reason = "linkedin_invalid_scope"
+        elif error in ("user_cancelled_authorize", "access_denied"):
+            reason = "linkedin_cancelled"
+        else:
+            reason = "linkedin_denied"
+        # error_description is often "Unknown" from LinkedIn; log it for
+        # debugging but don't surface raw text to the user.
+        if error_description:
+            print(f"LinkedIn callback error: {error} - {error_description}")
+        return RedirectResponse(f"{frontend_url}?error={reason}")
 
     if not state:
         # No logged-in user was threaded through — nothing to attach the
         # connection to, so fail cleanly back to the frontend.
-        return RedirectResponse(f"{frontend_url}?{FRONTEND_ERROR_PARAM}=linkedin_no_user")
+        return RedirectResponse(f"{frontend_url}?error=linkedin_no_user")
 
     try:
         resp = httpx.post(

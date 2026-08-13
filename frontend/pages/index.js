@@ -102,7 +102,21 @@ export default function Home() {
     } else if (connected === "linkedin") {
       setBanner({ type: "success", text: "LinkedIn connected." });
     } else if (error) {
-      setBanner({ type: "error", text: `Connection failed (${error}). Please try again.` });
+      const messages = {
+        linkedin_invalid_scope:
+          "LinkedIn rejected the login — the app is missing the 'Sign In with LinkedIn using OpenID Connect' product. Add it under Products in your LinkedIn developer app (linkedin.com/developers/apps), then try again.",
+        linkedin_cancelled: "LinkedIn login was cancelled.",
+        linkedin_denied: "LinkedIn login was cancelled or denied.",
+        linkedin_no_user: "You need to be logged in before connecting LinkedIn.",
+        linkedin_not_configured: "LinkedIn isn't configured on the server yet — try again in a few minutes.",
+        linkedin_auth_failed: "LinkedIn authorization failed. Please try again.",
+      };
+      setBanner({
+        type: "error",
+        text:
+          messages[error] ||
+          `Connection failed (${error}). Please try again.`,
+      });
     }
     if (connected || error) {
       window.history.replaceState({}, "", "/");
