@@ -1,0 +1,22 @@
+# FastAPI Cloud deploy excludes — the archive is built from the repo root,
+# and the app's runtime directory is "backend". Keep heavy/local-only files out.
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+venv/
+.venv/
+
+# Frontend
+node_modules/
+.next/
+out/
+
+# Env & secrets
+.env
+.env.*
+
+# Local FastAPI Cloud link config (cloud.json is not needed inside the archive)
+.fastapicloud/
