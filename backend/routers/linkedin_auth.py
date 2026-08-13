@@ -19,8 +19,6 @@ approved. Beyond the basic connect, it:
 
   - fetches the member's profile (name + email) and stores it as
     `account_label` so the UI can show *who* is connected,
-  - stores the refresh token and exposes POST /linkedin/refresh so the
-    short-lived access token can be renewed without re-consent,
   - exposes GET /linkedin/status (for the header UI) and
     DELETE /linkedin/disconnect,
   - redirects back to the frontend with ?connected=linkedin or
@@ -36,11 +34,13 @@ from core.auth import get_admin_client, get_current_user_id
 
 router = APIRouter()
 
-# r_refresh_token keeps the access token renewable without asking the user
-# to re-consent every ~60 days. Extend with "r_organization_social,r_ads"
-# etc. once Marketing API access is approved — those scopes will fail
-# silently in the consent screen until then.
-SCOPES = "openid profile email r_refresh_token"
+# LinkedIn's OIDC discovery doc (linkedin.com/oauth/.well-known/openid-configuration)
+# lists exactly these three supported scopes. r_refresh_token is NOT in the list
+# and requesting it makes LinkedIn reject the whole request with
+# invalid_scope_error — so we request only the OIDC scopes. Consequence: no
+# refresh token, so access tokens (~60 days) can't be renewed silently; the
+# user re-consents on expiry. Revisit if LinkedIn adds it to scopes_supported.
+SCOPES = "openid profile email"
 
 FRONTEND_ERROR_PARAM = "error"
 
